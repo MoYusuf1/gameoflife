@@ -72,10 +72,15 @@ export class GameEngine {
         return this.grid.get(key);
     }
 
+    private currentCallback: (() => void) | undefined;
+
     // Start the game simulation
     public start(callback?: () => void): void {
         if (this.isRunning) return;
 
+        // Store the callback for later use when changing speed
+        this.currentCallback = callback;
+        
         this.isRunning = true;
         this.intervalId = setInterval(() => {
             this.nextGeneration();
@@ -97,8 +102,10 @@ export class GameEngine {
         if (this.speedMap[speedSetting] !== undefined) {
             this.speedSetting = speedSetting;
             if (this.isRunning) {
+                // Store the callback before stopping
+                const callback = this.currentCallback;
                 this.stop();
-                this.start();
+                this.start(callback);
             }
         }
     }

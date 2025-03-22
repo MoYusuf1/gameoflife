@@ -129,12 +129,12 @@ const GameGrid: React.FC<GameGridProps> = ({
             const { x: screenX, y: screenY } = gridToScreen(x, y);
 
             // Use theme-appropriate cell color
-            // In dark mode: orange cells
+            // In dark mode: white cells
             // In light mode: black cells
             const isDarkMode = document.documentElement.classList.contains('dark');
             
             if (isDarkMode) {
-                ctx.fillStyle = '#ff6b00'; // Orange color for dark mode
+                ctx.fillStyle = '#ffffff'; // White color for dark mode
             } else {
                 ctx.fillStyle = '#000000'; // Black color for light mode
             }

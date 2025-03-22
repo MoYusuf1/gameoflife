@@ -76,14 +76,14 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ gameEngine, onSpeedChange }
                         onClick={toggleSimulation}
                         className={`px-4 py-2 rounded-md font-medium text-sm ${isRunning 
                             ? 'bg-red-500 hover:bg-red-600 text-white' 
-                            : 'bg-orange-500 hover:bg-orange-600 text-white'}`}
+                            : 'bg-black dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-black'}`}
                     >
                         {isRunning ? 'Stop' : 'Start'}
                     </button>
                     
                     <button 
                         onClick={nextGen}
-                        className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md font-medium text-sm"
+                        className="px-4 py-2 bg-black dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-black rounded-md font-medium text-sm"
                         disabled={isRunning}
                     >
                         Next Gen
@@ -91,10 +91,9 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ gameEngine, onSpeedChange }
                     
                     <button 
                         onClick={clearGrid}
-                        className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md font-medium text-sm col-span-2"
+                        className="px-4 py-2 bg-black dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-200 text-white dark:text-black rounded-md font-medium text-sm col-span-2"
                     >
                         Clear Grid
-                   
                     </button>
                 </div>
                 
