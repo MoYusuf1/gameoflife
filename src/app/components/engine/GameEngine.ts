@@ -16,7 +16,14 @@ export class GameEngine {
     private generation: number = 0;
     private isRunning: boolean = false;
     private intervalId: NodeJS.Timeout | null = null;
-    private speed: number = 100; // ms between generations
+    private speedSetting: string = 'medium'; // speed setting: very slow, slow, medium, fast, very fast
+    private speedMap: Record<string, number> = {
+        'very slow': 500,
+        'slow': 300,
+        'medium': 100,
+        'fast': 30,
+        'very fast': 10
+    }
 
     constructor() {
         this.reset();
@@ -73,7 +80,7 @@ export class GameEngine {
         this.intervalId = setInterval(() => {
             this.nextGeneration();
             if (callback) callback();
-        }, this.speed);
+        }, this.speedMap[this.speedSetting]);
     }
 
     // Stop the game simulation
@@ -86,12 +93,24 @@ export class GameEngine {
     }
 
     // Set simulation speed
-    public setSpeed(speed: number): void {
-        this.speed = speed;
-        if (this.isRunning) {
-            this.stop();
-            this.start();
+    public setSpeed(speedSetting: string): void {
+        if (this.speedMap[speedSetting] !== undefined) {
+            this.speedSetting = speedSetting;
+            if (this.isRunning) {
+                this.stop();
+                this.start();
+            }
         }
+    }
+    
+    // Get current speed setting
+    public getSpeedSetting(): string {
+        return this.speedSetting;
+    }
+    
+    // Get available speed settings
+    public getSpeedSettings(): string[] {
+        return Object.keys(this.speedMap);
     }
 
     // Check if simulation is running

@@ -16,9 +16,12 @@ const GameGrid: React.FC<GameGridProps> = ({
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isPanning, setIsPanning] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
     const [lastPosition, setLastPosition] = useState({ x: 0, y: 0 });
     const [offset, setOffset] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
+    const [selectedCells, setSelectedCells] = useState(new Set<string>());
+    const [lastToggledCell, setLastToggledCell] = useState<{ x: number, y: number } | null>(null);
 
     // Calculate the effective cell size based on zoom level
     const effectiveCellSize = cellSize * zoom;
@@ -36,38 +39,21 @@ const GameGrid: React.FC<GameGridProps> = ({
         const y = gridY * effectiveCellSize + offset.y;
         return { x, y };
     }, [offset, effectiveCellSize]);
-
-    // Handle mouse down event for panning
-    const handleMouseDown = useCallback((e: React.MouseEvent) => {
-        if (e.button === 1 || e.button === 2 || e.ctrlKey) { // Middle button or right button or Ctrl+Left
-            setIsPanning(true);
-            setLastPosition({ x: e.clientX, y: e.clientY });
-        }
-    }, []);
-
-    // Handle mouse move event for panning
-    const handleMouseMove = useCallback((e: React.MouseEvent) => {
-        if (isPanning) {
-            const deltaX = e.clientX - lastPosition.x;
-            const deltaY = e.clientY - lastPosition.y;
-
-            setOffset(prev => ({
-                x: prev.x + deltaX,
-                y: prev.y + deltaY
-            }));
-
-            setLastPosition({ x: e.clientX, y: e.clientY });
-        }
-    }, [isPanning, lastPosition]);
-
-    // Handle mouse up event to stop panning
+    
+    // Handle mouse up event to stop panning or dragging
     const handleMouseUp = useCallback(() => {
         setIsPanning(false);
+        setIsDragging(false);
+        setSelectedCells(new Set());
+        setLastToggledCell(null);
     }, []);
 
-    // Handle mouse leave event to stop panning
+    // Handle mouse leave event to stop panning or dragging
     const handleMouseLeave = useCallback(() => {
         setIsPanning(false);
+        setIsDragging(false);
+        setSelectedCells(new Set());
+        setLastToggledCell(null);
     }, []);
 
     // Handle mouse wheel event for zooming
@@ -106,8 +92,9 @@ const GameGrid: React.FC<GameGridProps> = ({
         const endX = Math.ceil((canvas.width - offset.x) / effectiveCellSize) + 1;
         const endY = Math.ceil((canvas.height - offset.y) / effectiveCellSize) + 1;
 
-        // Draw grid lines (optional)
-        ctx.strokeStyle = '#ddd';
+        // Draw grid lines with theme-appropriate color
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        ctx.strokeStyle = isDarkMode ? '#444' : '#ddd';
         ctx.lineWidth = 0.5;
 
         // Draw vertical grid lines
@@ -141,13 +128,16 @@ const GameGrid: React.FC<GameGridProps> = ({
 
             const { x: screenX, y: screenY } = gridToScreen(x, y);
 
-            // Calculate cell color based on age
-            // Younger cells are more vibrant, older cells fade to a different color
-            const hue = (120 - Math.min(cell.age, 100)) * 2.4; // From green (120) to red (0) over 50 generations
-            const saturation = 100 - Math.min(cell.age, 50); // Fade saturation over time
-            const lightness = 50; // Keep lightness constant
-
-            ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+            // Use theme-appropriate cell color
+            // In dark mode: orange cells
+            // In light mode: black cells
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            
+            if (isDarkMode) {
+                ctx.fillStyle = '#ff6b00'; // Orange color for dark mode
+            } else {
+                ctx.fillStyle = '#000000'; // Black color for light mode
+            }
             ctx.fillRect(
                 screenX,
                 screenY,
@@ -161,10 +151,12 @@ const GameGrid: React.FC<GameGridProps> = ({
             onGenerationChange(gameState.generation);
         }
     }, [gameEngine, offset, effectiveCellSize, gridToScreen, onGenerationChange]);
-    
-    // Handle mouse click to toggle cell state
-    const handleClick = useCallback((e: React.MouseEvent) => {
-        if (e.button === 0 && !e.ctrlKey) { // Left click without Ctrl
+    // Handle mouse down event for panning or cell selection
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        if (e.button === 1 || e.button === 2 || e.ctrlKey) { // Middle button or right button or Ctrl+Left
+            setIsPanning(true);
+            setLastPosition({ x: e.clientX, y: e.clientY });
+        } else if (e.button === 0) { // Left click for cell selection
             const canvas = canvasRef.current;
             if (!canvas) return;
 
@@ -173,6 +165,12 @@ const GameGrid: React.FC<GameGridProps> = ({
             const y = e.clientY - rect.top;
 
             const gridCoords = screenToGrid(x, y);
+            const cellKey = `${gridCoords.x},${gridCoords.y}`;
+
+            // Start dragging and toggle the first cell
+            setIsDragging(true);
+            setSelectedCells(new Set([cellKey]));
+            setLastToggledCell(gridCoords);
             gameEngine.toggleCell(gridCoords.x, gridCoords.y);
 
             // Trigger a redraw
@@ -180,7 +178,52 @@ const GameGrid: React.FC<GameGridProps> = ({
         }
     }, [gameEngine, screenToGrid, drawGrid]);
 
-    
+    // Handle mouse move event for panning or cell selection
+    const handleMouseMove = useCallback((e: React.MouseEvent) => {
+        if (isPanning) {
+            const deltaX = e.clientX - lastPosition.x;
+            const deltaY = e.clientY - lastPosition.y;
+
+            setOffset(prev => ({
+                x: prev.x + deltaX,
+                y: prev.y + deltaY
+            }));
+
+            setLastPosition({ x: e.clientX, y: e.clientY });
+        } else if (isDragging) {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const gridCoords = screenToGrid(x, y);
+            const cellKey = `${gridCoords.x},${gridCoords.y}`;
+
+            // Only toggle if this is a new cell that hasn't been toggled in this drag operation
+            if (!selectedCells.has(cellKey) &&
+                (lastToggledCell?.x !== gridCoords.x || lastToggledCell?.y !== gridCoords.y)) {
+                setSelectedCells(prev => {
+                    const newSet = new Set(prev);
+                    newSet.add(cellKey);
+                    return newSet;
+                });
+                setLastToggledCell(gridCoords);
+                gameEngine.toggleCell(gridCoords.x, gridCoords.y);
+
+                // Trigger a redraw
+                drawGrid();
+            }
+        }
+    }, [isPanning, isDragging, lastPosition, selectedCells, lastToggledCell, gameEngine, screenToGrid, drawGrid]);
+    // Handle mouse click to toggle cell state - this is now handled in mouseDown/mouseMove
+    const handleClick = useCallback(() => {
+        // Click handling is now managed by mouseDown and mouseMove for drag selection
+        // This is kept for compatibility but doesn't need to do anything
+    }, []);
+
+
     // Effect to adjust offset when zoom changes to keep the mouse position fixed
     useEffect(() => {
         const handleZoomChange = () => {

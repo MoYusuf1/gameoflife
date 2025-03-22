@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GameEngine, PATTERNS } from '../engine/GameEngine';
+import { GameEngine } from '../engine/GameEngine';
 
 interface ControlPanelProps {
     gameEngine: GameEngine;
-    onSpeedChange: (speed: number) => void;
+    onSpeedChange: (speed: string) => void;
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = ({ gameEngine, onSpeedChange }) => {
     const [isRunning, setIsRunning] = useState(false);
-    const [speed, setSpeed] = useState(100); // Default speed in ms
-    const [selectedPattern, setSelectedPattern] = useState<string>('GLIDER');
+    const [speedSetting, setSpeedSetting] = useState<string>('medium'); // Default speed setting
+    const speedOptions = ['very slow', 'slow', 'medium', 'fast', 'very fast'];
     const [generation, setGeneration] = useState(0);
 
     // Toggle simulation running state
@@ -20,6 +20,10 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ gameEngine, onSpeedChange }
             gameEngine.stop();
             setIsRunning(false);
         } else {
+            // Update generation count before starting
+            setGeneration(gameEngine.getGeneration());
+            
+            // Start the simulation with a callback that updates the generation count
             gameEngine.start(() => {
                 // Update generation count when callback is triggered
                 setGeneration(gameEngine.getGeneration());
@@ -30,10 +34,16 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ gameEngine, onSpeedChange }
 
     // Handle speed change
     const handleSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newSpeed = parseInt(e.target.value);
-        setSpeed(newSpeed);
-        onSpeedChange(newSpeed);
-        gameEngine.setSpeed(newSpeed);
+        const index = parseInt(e.target.value);
+        const newSpeedSetting = speedOptions[index];
+        setSpeedSetting(newSpeedSetting);
+        onSpeedChange(newSpeedSetting);
+        gameEngine.setSpeed(newSpeedSetting);
+    };
+    
+    // Get the index of the current speed setting
+    const getSpeedIndex = (speed: string): number => {
+        return speedOptions.indexOf(speed);
     };
 
     // Clear the grid
@@ -46,21 +56,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ gameEngine, onSpeedChange }
         }
     };
 
-    // Add selected pattern to the grid
-    const addPattern = () => {
-        // Add pattern at the center of the visible area (approximate)
-        const pattern = PATTERNS[selectedPattern as keyof typeof PATTERNS];
-        if (pattern) {
-            gameEngine.addPattern(pattern, 10, 10); // Add at position 10,10 for now
-            setGeneration(gameEngine.getGeneration());
-        }
-    };
-
-    // Handle pattern selection change
-    const handlePatternChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setSelectedPattern(e.target.value);
-    };
-
+    
     // Generate next generation manually
     const nextGen = () => {
         gameEngine.nextGeneration();
@@ -80,14 +76,14 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ gameEngine, onSpeedChange }
                         onClick={toggleSimulation}
                         className={`px-4 py-2 rounded-md font-medium text-sm ${isRunning 
                             ? 'bg-red-500 hover:bg-red-600 text-white' 
-                            : 'bg-green-500 hover:bg-green-600 text-white'}`}
+                            : 'bg-orange-500 hover:bg-orange-600 text-white'}`}
                     >
                         {isRunning ? 'Stop' : 'Start'}
                     </button>
                     
                     <button 
                         onClick={nextGen}
-                        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium text-sm"
+                        className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md font-medium text-sm"
                         disabled={isRunning}
                     >
                         Next Gen
@@ -95,47 +91,33 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ gameEngine, onSpeedChange }
                     
                     <button 
                         onClick={clearGrid}
-                        className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md font-medium text-sm"
+                        className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md font-medium text-sm col-span-2"
                     >
                         Clear Grid
-                    </button>
-                    
-                    <button 
-                        onClick={addPattern}
-                        className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-md font-medium text-sm"
-                    >
-                        Add Pattern
+                   
                     </button>
                 </div>
                 
                 <div className="space-y-2">
-                    <label className="block text-sm font-medium dark:text-white">
-                        Pattern:
-                        <select 
-                            value={selectedPattern}
-                            onChange={handlePatternChange}
-                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        >
-                            {Object.keys(PATTERNS).map((pattern) => (
-                                <option key={pattern} value={pattern}>
-                                    {pattern.replace('_', ' ')}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                    
-                    <label className="block text-sm font-medium dark:text-white">
-                        Speed: {speed}ms
+                    <div className="block text-sm font-medium dark:text-white">
+                        <div className="flex justify-between items-center">
+                            <span>Speed:</span>
+                            <span className="text-xs font-medium">{speedSetting}</span>
+                        </div>
                         <input 
                             type="range" 
-                            min="10" 
-                            max="500" 
-                            step="10"
-                            value={speed}
+                            min="0" 
+                            max="4" 
+                            step="1"
+                            value={getSpeedIndex(speedSetting)}
                             onChange={handleSpeedChange}
-                            className="mt-1 block w-full"
+                            className="mt-1 block w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
                         />
-                    </label>
+                        <div className="flex justify-between text-xs mt-1 dark:text-gray-400">
+                            <span>Very Slow</span>
+                            <span>Very Fast</span>
+                        </div>
+                    </div>
                 </div>
                 
                 <div className="text-xs text-gray-500 dark:text-gray-400">

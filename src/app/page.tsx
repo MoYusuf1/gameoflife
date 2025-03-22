@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { GameEngine } from './components/engine/GameEngine';
 import GameGrid from './components/engine/GameGrid';
 import ControlPanel from './components/controls/ControlPanel';
+import ThemeToggle from './components/theme/ThemeToggle';
 
 export default function Home() {
   // Create a game engine instance
@@ -11,7 +12,7 @@ export default function Home() {
   const [cellSize] = useState(10); // Default cell size
   
   // Handle speed change from control panel
-  const handleSpeedChange = () => {
+  const handleSpeedChange = (speedSetting: string) => {
     // Speed is handled directly by the GameEngine
   };
 
@@ -19,9 +20,14 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm p-4">
-        <h1 className="text-2xl font-bold text-center text-gray-800 dark:text-white">
-          Conway&apos;s Game of Life
-        </h1>
+        <div className="flex justify-between items-center max-w-7xl mx-auto">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+            Conway&apos;s Game of Life
+          </h1>
+          <div className="flex items-center space-x-2">
+            <ThemeToggle />
+          </div>
+        </div>
       </header>
 
       {/* Main content */}
